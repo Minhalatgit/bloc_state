@@ -1,22 +1,38 @@
 import 'package:flutter/material.dart';
+import 'package:bloc/bloc.dart';
+import 'dart:math' as math show Random;
 
 void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
+  runApp(
+    MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
       home: const MyHomePage(title: 'Flutter Demo Home Page '),
-    );
+    ),
+  );
+}
+
+const names = [
+  "foo",
+  "bar",
+  "baz",
+];
+
+extension RandomElement<T> on Iterable<T> {
+  T getRandomElement() => elementAt(math.Random().nextInt(length));
+}
+
+class NamesCubit extends Cubit<String?> {
+  ///Init cubit state
+  NamesCubit() : super(null);
+
+  ///Emit is used to set state value
+
+  void pickRandoName() {
+    emit(names.getRandomElement());
   }
 }
 
@@ -30,12 +46,19 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+  late final NamesCubit cubit;
 
-  void _incrementCounter() {
-    setState(() {
-      _counter++;
-    });
+  @override
+  void initState() {
+    super.initState();
+
+    cubit = NamesCubit();
+  }
+
+  @override
+  void dispose() {
+    cubit.close();
+    super.dispose();
   }
 
   @override
@@ -44,22 +67,35 @@ class _MyHomePageState extends State<MyHomePage> {
       appBar: AppBar(
         title: Text(widget.title),
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
-        ),
+      body: StreamBuilder<String?>(
+        stream: cubit.stream,
+        builder: (context, snapshot) {
+          final button = TextButton(
+            onPressed: () {
+              cubit.pickRandoName();
+            },
+            child: const Text('Pick a random name'),
+          );
+
+          switch (snapshot.connectionState) {
+            case ConnectionState.none:
+              return button;
+            case ConnectionState.waiting:
+              return button;
+            case ConnectionState.active:
+              return Column(
+                children: [
+                  Text(snapshot.data ?? ""),
+                  button,
+                ],
+              );
+            case ConnectionState.done:
+              return const SizedBox();
+          }
+        },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
+        onPressed: () {},
         tooltip: 'Increment',
         child: const Icon(Icons.add),
       ),
