@@ -1,0 +1,55 @@
+
+extension IsEqualToIgnoringOrdering<T> on Iterable<T> {
+  bool isEqualToIgnoringOrdering(Iterable<T> other) =>
+      length == other.length &&
+      {...this}.intersection(({...other})).length == length;
+}
+
+
+@immutable
+class FetchResult {
+  final Iterable<Person> persons;
+  final bool isRetreivedFromCache;
+
+  const FetchResult({
+    required this.persons,
+    required this.isRetreivedFromCache,
+  });
+
+  @override
+  String toString() =>
+      "Fetch result (isRetreivedFromCache: $isRetreivedFromCache, persons: $persons)";
+}
+
+class PersonBloc extends Bloc<LoadAction, FetchResult?> {
+  Map<PersonUrl, Iterable<Person>> _cache = {};
+  PersonBloc() : super(null) {
+    on<LoadPersonAction>(
+      (event, emit) async {
+        final url = event.url;
+
+        if (_cache.containsKey(url)) {
+          final cachedPerson = _cache[url]!;
+
+          final result = FetchResult(
+            persons: cachedPerson,
+            isRetreivedFromCache: true,
+          );
+
+          emit(result);
+        } else {
+          final persons = await getPersons(url.urlString);
+
+          _cache[url] = persons;
+
+          final result = FetchResult(
+            persons: persons,
+            isRetreivedFromCache: false,
+          );
+
+          emit(result);
+        }
+      },
+    );
+  }
+}
